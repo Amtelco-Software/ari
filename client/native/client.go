@@ -21,7 +21,7 @@ import (
 // Logger defaults to a discard handler (null output).
 // If you wish to enable logging, you can set your own
 // handler like so:
-//		ari.Logger.SetHandler(log15.StderrHandler)
+//              ari.Logger.SetHandler(log15.StderrHandler)
 //
 var Logger = log15.New()
 
@@ -344,8 +344,9 @@ func (c *Client) listen(ctx context.Context, wg *sync.WaitGroup) {
 		// Exit if our context has been closed
 		if ctx.Err() != nil {
 			if wg != nil {
-				wg.Done()
+				signalUp.Do(wg.Done)
 			}
+
 			return
 		}
 
