@@ -63,7 +63,7 @@ type Options struct {
 // Providing a Context allows the caller to cancel the request, which is useful should the caller be in a go routine
 // that may be cancelled by it's parent.
 func ConnectWithContext(ctx context.Context, chanMsgConnected chan bool, opts *Options) (ari.Client, error) {
-	c := New(opts, chanMsgConnected)
+	c := NewWithChannelMsgConnected(opts, chanMsgConnected)
 
 	err := c.ConnectWithContext(ctx)
 	if err != nil {
@@ -82,7 +82,7 @@ func ConnectWithContext(ctx context.Context, chanMsgConnected chan bool, opts *O
 
 // Connect creates and connects a new Client to Asterisk ARI.
 func Connect(opts *Options) (ari.Client, error) {
-	c := New(opts, nil)
+	c := New(opts)
 
 	err := c.Connect()
 	if err != nil {
@@ -101,7 +101,7 @@ func Connect(opts *Options) (ari.Client, error) {
 
 // New creates a new ari.Client.  This function should not be used directly unless you need finer control.
 // nolint: gocyclo
-func New(opts *Options, chanMsgConnected chan bool) *Client {
+func NewWithChannelMsgConnected(opts *Options, chanMsgConnected chan bool) *Client {
 	if opts == nil {
 		opts = &Options{}
 	}
@@ -154,6 +154,10 @@ func New(opts *Options, chanMsgConnected chan bool) *Client {
 	}
 }
 
+func New(opts *Options) *Client {
+	return NewWithChannelMsgConnected(opts, nil)
+}
+
 // Client describes a native ARI client, which connects directly to an Asterisk HTTP-based ARI service.
 type Client struct {
 	appName string
@@ -166,7 +170,7 @@ type Client struct {
 	// WSConfig describes the configuration for the websocket connection to Asterisk, from which events will be received.
 	WSConfig *websocket.Config
 
-	// golang buffered channel to send Connection Up (true) and Down (false) messages to
+	// golang buffered channel to send Connection Up (true) or Down (false) messages to the caller
 	chanMsgConnected chan bool
 
 	// connected is a flag indicating whether the Client is connected to Asterisk
@@ -358,6 +362,10 @@ func (c *Client) listen(ctx context.Context, wg *sync.WaitGroup) {
 				signalUp.Do(wg.Done)
 			}
 
+			if c.chanMsgConnected != nil {
+				c.chanMsgConnected = nil
+			}
+
 			return
 		}
 
@@ -397,19 +405,21 @@ func (c *Client) listen(ctx context.Context, wg *sync.WaitGroup) {
 		// Wait for context closure or read error
 		select {
 		case <-ctx.Done():
-			// Make sure our websocket connection is closed before looping
-			c.connected = false
-			if c.chanMsgConnected != nil {
-				c.chanMsgConnected <- false
-				c.chanMsgConnected = nil
+			if c.connected {
+				c.connected = false
+				if c.chanMsgConnected != nil {
+					c.chanMsgConnected <- false
+				}
 			}
 
 		case err = <-c.wsRead(ws):
 			Logger.Error("read failure on websocket", "error", err)
 
-			c.connected = false
-			if c.chanMsgConnected != nil {
-				c.chanMsgConnected <- false
+			if c.connected {
+				c.connected = false
+				if c.chanMsgConnected != nil {
+					c.chanMsgConnected <- false
+				}
 			}
 
 			time.Sleep(10 * time.Millisecond)
@@ -418,13 +428,6 @@ func (c *Client) listen(ctx context.Context, wg *sync.WaitGroup) {
 		err = ws.Close()
 		if err != nil {
 			Logger.Debug("failed to close websocket", "error", err)
-		}
-
-		if c.connected {
-			c.connected = false
-			if c.chanMsgConnected != nil {
-				c.chanMsgConnected <- false
-			}
 		}
 	}
 }
