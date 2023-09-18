@@ -205,6 +205,8 @@ func (c *Client) Close() {
 			c.chanMsgConnected <- false
 		}
 	}
+
+	c.chanMsgConnected = nil
 }
 
 // Application returns the ARI Application accessors for this client
