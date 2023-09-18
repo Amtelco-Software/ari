@@ -401,6 +401,7 @@ func (c *Client) listen(ctx context.Context, wg *sync.WaitGroup) {
 			c.connected = false
 			if c.chanMsgConnected != nil {
 				c.chanMsgConnected <- false
+				c.chanMsgConnected = nil
 			}
 
 		case err = <-c.wsRead(ws):
