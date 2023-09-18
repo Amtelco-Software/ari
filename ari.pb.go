@@ -190,11 +190,11 @@ type ChannelData struct {
 	// Language is the default spoken language for this channel
 	Language string `protobuf:"bytes,10,opt,name=language,proto3" json:"language,omitempty"`
 	// ChannelVars is the list of channel variables set on this channel
-	ChannelVars map[string]string `protobuf:"bytes,11,rep,name=channelvars,proto3" json:"channelvars,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	// ProtocolID is the protocol id from the underlying channel driver
+	ChannelVars          map[string]string `protobuf:"bytes,11,rep,name=channelvars,proto3" json:"channelvars,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	// ProtocolId is the protocol id from the underlying channel driver
 	// For chan_sip and PJSIP this will be the SIP packets Call-ID value
-	// Empty if not applicable or implemented by the driver
-	ProtocolID           string   `protobuf:"bytes,12,opt,name=protocol_id,json=protocolId,proto3" json:"protocol_id,omitempty"`
+	// Empty if not applicable or not implemented by the driver
+	ProtocolId           string   `protobuf:"bytes,12,opt,name=protocol_id,json=protocolId,proto3" json:"protocol_id,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -310,9 +310,9 @@ func (m *ChannelData) GetChannelVars() map[string]string {
 	return nil
 }
 
-func (m *ChannelData) GetProtocolID() string {
+func (m *ChannelData) GetProtocolId() string {
 	if m != nil {
-		return m.ProtocolID
+		return m.ProtocolId
 	}
 	return ""
 }
@@ -325,9 +325,9 @@ type DialplanCEP struct {
 	Exten string `protobuf:"bytes,2,opt,name=exten,proto3" json:"exten,omitempty"`
 	// Priority indicates the index at the label in the section of the dialplan
 	Priority             int64    `protobuf:"varint,3,opt,name=priority,proto3" json:"priority,omitempty"`
-	// Appname indicates the current dialplan application name
+	// AppName indicates the current dialplan application name
 	AppName              string   `protobuf:"bytes,4,opt,name=app_name,json=appName,proto3" json:"app_name,omitempty"`
-	// Appdata indicates all data parameters passed to the dialplan appname
+	// AppData indicates all data parameters passed to the dialplan AppName
 	AppData              string   `protobuf:"bytes,5,opt,name=app_data,json=appData,proto3" json:"app_data,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -580,10 +580,10 @@ func (m *ChannelData) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i -= len(m.XXX_unrecognized)
 		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	if len(m.ProtocolID) > 0 {
-		i -= len(m.ProtocolID)
-		copy(dAtA[i:], m.ProtocolID)
-		i = encodeVarintAri(dAtA, i, uint64(len(m.ProtocolID)))
+	if len(m.ProtocolId) > 0 {
+		i -= len(m.ProtocolId)
+		copy(dAtA[i:], m.ProtocolId)
+		i = encodeVarintAri(dAtA, i, uint64(len(m.ProtocolId)))
 		i--
 		dAtA[i] = 0x62
 	}
@@ -881,7 +881,7 @@ func (m *ChannelData) Size() (n int) {
 			n += mapEntrySize + 1 + sovAri(uint64(mapEntrySize))
 		}
 	}
-	l = len(m.ProtocolID)
+	l = len(m.ProtocolId)
 	if l > 0 {
 		n += 1 + l + sovAri(uint64(l))
 	}
@@ -1752,7 +1752,7 @@ func (m *ChannelData) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 12:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ProtocolID", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field ProtocolId", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -1780,7 +1780,7 @@ func (m *ChannelData) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.ProtocolID = string(dAtA[iNdEx:postIndex])
+			m.ProtocolId = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

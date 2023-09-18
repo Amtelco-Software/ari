@@ -147,7 +147,7 @@ type channelDataJSON struct {
 	Dialplan     *DialplanCEP      `json:"dialplan"` // Current location in the dialplan
 	Language     string            `json:"language"` // Language (expected)
 	ChannelVars  map[string]string `json:"channelvars"`
-	ProtocolID   string            `json:"protocol_id"` // Protocol id from underlying channel driver (SIP header Call-ID value for chan_sip/PJSIP)
+	ProtocolId   string            `json:"protocolid"` // Protocol id from underlying channel driver (SIP header Call-ID value for chan_sip/PJSIP)
 }
 
 // MarshalJSON encodes ChannelData to JSON
@@ -169,7 +169,7 @@ func (d *ChannelData) MarshalJSON() ([]byte, error) {
 		Dialplan:     d.Dialplan,
 		Language:     d.Language,
 		ChannelVars:  d.ChannelVars,
-		ProtocolID:   d.ProtocolID,
+		ProtocolId:   d.ProtocolId,
 	})
 }
 
@@ -198,7 +198,7 @@ func (d *ChannelData) UnmarshalJSON(data []byte) error {
 		Dialplan:     in.Dialplan,
 		Language:     in.Language,
 		ChannelVars:  in.ChannelVars,
-		ProtocolID:   in.ProtocolID,
+		ProtocolId:   in.ProtocolId,
 	}
 
 	return nil
@@ -272,6 +272,9 @@ type ExternalMediaOptions struct {
 
 	// Direction specifies the directionality of the audio stream.  Options include 'both'.  This parameter is optional and if not specified, 'both' will be used.
 	Direction string `json:"direction"`
+
+	// Data: when encapsulation=audiosocket this specifies the UUID to send
+	Data string `json:"data,omitempty"`
 
 	// Variables defines the set of channel variables which should be bound to this channel upon creation.  This parameter is optional.
 	Variables map[string]string `json:"variables"`
