@@ -60,24 +60,26 @@ type Options struct {
 }
 
 // ConnectWithContext creates and connects a new Client to Asterisk ARI.
-// Providing a Context allows the caller to cancel the request, which is useful should the caller be in a go routine
-// that may be cancelled by it's parent.
-func ConnectWithContext(ctx context.Context, chanMsgConnected chan bool, opts *Options) (ari.Client, error) {
-	c := NewWithChannelMsgConnected(opts, chanMsgConnected)
+// Providing a Context allows the caller to control the lifetime of the connection.
+// If you want to receive channel messages when the connection is Up (true) or Down (false),
+// specify a non-zero sizeForMsgConnectedChannel. This value sets the size of the buffered channel (when non-zero).
+// Caller receives the ari.Client, channel for reading the MsgConnected messages (if non-nil), and a error (nil if success).
+func ConnectWithContext(ctx context.Context, sizeForMsgConnectedChannel int, opts *Options) (ari.Client, chan bool, error) {
+	c := NewWithChannelMsgConnected(opts, sizeForMsgConnectedChannel)
 
 	err := c.ConnectWithContext(ctx)
 	if err != nil {
-		return c, err
+		return c, c.chanMsgConnected, err
 	}
 
 	info, err := c.Asterisk().Info(nil)
 	if err != nil {
-		return c, err
+		return c, c.chanMsgConnected, err
 	}
 
 	c.node = info.SystemInfo.EntityID
 
-	return c, err
+	return c, c.chanMsgConnected, err
 }
 
 // Connect creates and connects a new Client to Asterisk ARI.
@@ -99,9 +101,11 @@ func Connect(opts *Options) (ari.Client, error) {
 	return c, err
 }
 
-// New creates a new ari.Client.  This function should not be used directly unless you need finer control.
+// NewWithChannelMsgConnected creates a new ari.Client and configures a channel for connection up/down messages.
+// If sizeForMsgConnectedChannel is 0, then no channel will be created and no messages will be sent.
+// This function should not be used directly unless you need finer control.
 // nolint: gocyclo
-func NewWithChannelMsgConnected(opts *Options, chanMsgConnected chan bool) *Client {
+func NewWithChannelMsgConnected(opts *Options, sizeForMsgConnectedChannel int) *Client {
 	if opts == nil {
 		opts = &Options{}
 	}
@@ -147,6 +151,13 @@ func NewWithChannelMsgConnected(opts *Options, chanMsgConnected chan bool) *Clie
 		opts.Password = os.Getenv("ARI_PASSWORD")
 	}
 
+	var chanMsgConnected chan bool
+	if sizeForMsgConnectedChannel > 0 {
+		chanMsgConnected = make(chan bool, sizeForMsgConnectedChannel)
+	} else {
+		chanMsgConnected = nil
+	}
+
 	return &Client{
 		appName:          opts.Application,
 		Options:          opts,
@@ -154,8 +165,10 @@ func NewWithChannelMsgConnected(opts *Options, chanMsgConnected chan bool) *Clie
 	}
 }
 
+// New creates a new ari.Client.  This function should not be used directly unless you need finer control.
+// nolint: gocyclo
 func New(opts *Options) *Client {
-	return NewWithChannelMsgConnected(opts, nil)
+	return NewWithChannelMsgConnected(opts, 0)
 }
 
 // Client describes a native ARI client, which connects directly to an Asterisk HTTP-based ARI service.
@@ -405,13 +418,6 @@ func (c *Client) listen(ctx context.Context, wg *sync.WaitGroup) {
 		// Wait for context closure or read error
 		select {
 		case <-ctx.Done():
-			if c.connected {
-				c.connected = false
-				if c.chanMsgConnected != nil {
-					c.chanMsgConnected <- false
-				}
-			}
-
 		case err = <-c.wsRead(ws):
 			Logger.Error("read failure on websocket", "error", err)
 
@@ -423,6 +429,14 @@ func (c *Client) listen(ctx context.Context, wg *sync.WaitGroup) {
 			}
 
 			time.Sleep(10 * time.Millisecond)
+		}
+
+		// Make sure our websocket connection is closed before looping
+		if c.connected {
+			c.connected = false
+			if c.chanMsgConnected != nil {
+				c.chanMsgConnected <- false
+			}
 		}
 
 		err = ws.Close()
