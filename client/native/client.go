@@ -59,7 +59,7 @@ type Options struct {
 	SubscribeAll bool
 
 	// buffered channel for sending Connection Up (true) or Down (false) messages to the caller
-	chanMsgConnected chan bool
+	ChanMsgConnected chan bool
 }
 
 // ConnectWithContext sets up and maintains and a websocket connection to Asterisk, passing any received events to the Bus
@@ -105,7 +105,7 @@ func Connect(opts *Options) (ari.Client, error) {
 // nolint: gocyclo
 func New(opts *Options) *Client {
 	if opts == nil {
-		opts = &Options{chanMsgConnected: nil}
+		opts = &Options{}
 	}
 
 	// Make sure we have an Application defined
@@ -199,12 +199,12 @@ func (c *Client) Close() {
 
 	if c.connected {
 		c.connected = false
-		if c.Options.chanMsgConnected != nil {
-			c.Options.chanMsgConnected <- false
+		if c.Options.ChanMsgConnected != nil {
+			c.Options.ChanMsgConnected <- false
 		}
 	}
 
-	c.Options.chanMsgConnected = nil
+	c.Options.ChanMsgConnected = nil
 }
 
 // Application returns the ARI Application accessors for this client
@@ -383,8 +383,8 @@ func (c *Client) listen(ctx context.Context, wg *sync.WaitGroup) {
 
 		// We are connected
 		c.connected = true
-		if c.Options.chanMsgConnected != nil {
-			c.Options.chanMsgConnected <- true
+		if c.Options.ChanMsgConnected != nil {
+			c.Options.ChanMsgConnected <- true
 		}
 
 		// Signal that we are connected (the first time only)
@@ -400,8 +400,8 @@ func (c *Client) listen(ctx context.Context, wg *sync.WaitGroup) {
 
 			if c.connected {
 				c.connected = false
-				if c.Options.chanMsgConnected != nil {
-					c.Options.chanMsgConnected <- false
+				if c.Options.ChanMsgConnected != nil {
+					c.Options.ChanMsgConnected <- false
 				}
 			}
 
@@ -411,8 +411,8 @@ func (c *Client) listen(ctx context.Context, wg *sync.WaitGroup) {
 		// Make sure our websocket connection is closed before looping
 		if c.connected {
 			c.connected = false
-			if c.Options.chanMsgConnected != nil {
-				c.Options.chanMsgConnected <- false
+			if c.Options.ChanMsgConnected != nil {
+				c.Options.ChanMsgConnected <- false
 			}
 		}
 
